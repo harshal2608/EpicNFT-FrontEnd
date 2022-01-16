@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import myEpicNft from '../../utils/myEpicNft.json';
 
 const CONTRACT_ADDRESS = '0xaa5EA07E198e1c9aE5980b53776e2dD9f90c5B84';
+declare let window: any;
 
 const HeaderWrapper = styled.div`
   padding-top: 30px;
