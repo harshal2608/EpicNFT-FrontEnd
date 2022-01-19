@@ -20,6 +20,7 @@ const Heading = styled.div`
   font-weight: bold;
 `;
 const GradientText = styled.div`
+  font-size: 1.3rem;
   background: -webkit-linear-gradient(left, #60c657 30%, #35aee2 60%);
   background-clip: text;
   -webkit-background-clip: text;
@@ -37,7 +38,7 @@ const CTAButton = styled.button`
   padding-right: 40px;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: bold;
   color: white;
 `;
@@ -45,6 +46,11 @@ const ConnectWalletButton = styled(CTAButton)`
   background: -webkit-linear-gradient(left, #60c657, #35aee2);
   background-size: 200% 200%;
   animation: gradient-animation 4s ease infinite;
+
+  &:disabled {
+    background: grey;
+    cursor: not-allowed;
+  }
 
   @-webkit-keyframes gradient-animation {
     0% {
@@ -98,7 +104,14 @@ const Header = () => {
       const account = accounts[0];
       console.log('Found an authorized account:', account);
       setCurrentAccount(account);
+      let chainId = await ethereum.request({ method: 'eth_chainId' });
+      console.log('Connected to chain ' + chainId);
 
+      // String, hex code of the chainId of the Rinkebey test network
+      const rinkebyChainId = '0x4';
+      if (chainId !== rinkebyChainId) {
+        alert('You are not connected to the Rinkeby Test Network!');
+      }
       setupEventListener();
     } else {
       console.log('No authorized account found');
@@ -241,9 +254,10 @@ const Header = () => {
   );
   return (
     <HeaderWrapper>
-      <Heading>
-        <GradientText>My NFT Collection</GradientText>
-      </Heading>
+      <GradientText>
+        <Heading>My NFT Collection </Heading>
+      </GradientText>
+
       <Description>
         Each unique. Each beautiful. Discover your NFT today.
       </Description>
@@ -251,14 +265,17 @@ const Header = () => {
       {currentAccount === '' ? (
         renderNotConnectedContainer()
       ) : (
-        <ConnectWalletButton onClick={askContractToMintNft}>
+        <ConnectWalletButton
+          disabled={totalNFT === 50}
+          onClick={askContractToMintNft}
+        >
           Mint NFT
         </ConnectWalletButton>
       )}
       <ConnectWalletButton onClick={HandleCollectionButton}>
         See My Collection
       </ConnectWalletButton>
-      <GradientText>{`Total ${totalNFT}/50`}</GradientText>
+      <GradientText>{` ${totalNFT}/50 NFTs Minted So Far`}</GradientText>
     </HeaderWrapper>
   );
 };
