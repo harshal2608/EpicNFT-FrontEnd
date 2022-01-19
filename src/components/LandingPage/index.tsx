@@ -6,7 +6,7 @@ import Footer from '../Footer';
 const LandingPageWrapper = styled.div`
   height: 100vh;
   background-color: #0d1116;
-  overflow: scroll;
+  /* overflow: scroll; */
   text-align: center;
 `;
 
