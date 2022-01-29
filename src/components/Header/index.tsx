@@ -2,8 +2,11 @@ import { ethers } from 'ethers';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import myEpicNft from '../../utils/myEpicNft.json';
+import { useGlobalModalContext, MODAL_TYPES } from '../../context/globalModal';
 
 const CONTRACT_ADDRESS = '0xaa5EA07E198e1c9aE5980b53776e2dD9f90c5B84';
+// https://testnets.opensea.io/assets/${CONTRACT_ADDRESS}/${tokenId.toNumber()}
+
 declare let window: any;
 
 const HeaderWrapper = styled.div`
@@ -88,33 +91,43 @@ const ConnectWalletButton = styled(CTAButton)`
 `;
 
 const Header = () => {
+  const { showModal, hideModal } = useGlobalModalContext();
+  const loadingModal = (loadingmessage: string) => {
+    showModal(MODAL_TYPES.LOADING_MODAL, { message: loadingmessage });
+  };
+  const errorModal = (error: string) => {
+    showModal(MODAL_TYPES.ERROR_MODAL, { error: error });
+  };
+  const successModal = (successmessage: string) => {
+    showModal(MODAL_TYPES.SUCCESS_MODAL, { message: successmessage });
+  };
+
   const [currentAccount, setCurrentAccount] = useState('');
   const [totalNFT, setTotalNFT] = useState(0);
 
   const checkIfWalletIsConnected = async () => {
     const { ethereum } = window;
     if (!ethereum) {
-      console.log('Make Sure You Have Metamask!');
-    } else {
-      console.log('We Have The Ethereum Object', ethereum);
+      errorModal("You Don't Have Metamask.");
+      return;
     }
     const accounts = await ethereum.request({ method: 'eth_accounts' });
 
     if (accounts.length !== 0) {
       const account = accounts[0];
-      console.log('Found an authorized account:', account);
+
       setCurrentAccount(account);
       let chainId = await ethereum.request({ method: 'eth_chainId' });
-      console.log('Connected to chain ' + chainId);
 
       // String, hex code of the chainId of the Rinkebey test network
       const rinkebyChainId = '0x4';
       if (chainId !== rinkebyChainId) {
-        alert('You are not connected to the Rinkeby Test Network!');
+        errorModal('You are not connected to the Rinkeby Test Network!');
       }
       setupEventListener();
+      getTotalNumber();
     } else {
-      console.log('No authorized account found');
+      errorModal('No authorized account found');
     }
   };
 
@@ -123,7 +136,7 @@ const Header = () => {
       const { ethereum } = window;
 
       if (!ethereum) {
-        alert('Get Metamask');
+        errorModal('get Metamask');
         return;
       }
 
@@ -134,6 +147,7 @@ const Header = () => {
       setCurrentAccount(accounts[0]);
 
       setupEventListener();
+      getTotalNumber();
     } catch (error) {
       console.log(error);
     }
@@ -159,19 +173,15 @@ const Header = () => {
         // If you're familiar with webhooks, it's very similar to that!
         connectedContract.on('NewEpicNFTMinted', (from, tokenId) => {
           console.log(from, tokenId.toNumber());
-          alert(
-            `Hey there! We've minted your NFT and sent it to your wallet. It may be blank right now. It can take a max of 10 min to show up on OpenSea. Here's the link: https://testnets.opensea.io/assets/${CONTRACT_ADDRESS}/${tokenId.toNumber()}`
-          );
+
+          // successModal(tokenId);
           getTotalNumber();
         });
-        // getTotalNumber();
-        console.log(totalNFT);
-        console.log('Setup event listener!');
       } else {
-        console.log("Ethereum object doesn't exist!");
+        errorModal("Ethereum Object Doesn't Exist");
       }
     } catch (error) {
-      console.log(error);
+      errorModal(error);
     }
   };
 
@@ -188,20 +198,18 @@ const Header = () => {
           signer
         );
 
-        console.log('GOing to pop up wallet now to pay gas...');
+        loadingModal('Waiting For Confirmation');
         let nftTxn = await connetedContract.makeAnEpicNFT();
-
-        console.log('Mining... please wait.');
+        hideModal();
+        loadingModal('Minting...');
         await nftTxn.wait();
-
-        console.log(
-          `Minted, see transaction: https://rinkeby.etherscan.io/tx/${nftTxn.hash}`
-        );
+        hideModal();
+        successModal(nftTxn.hash);
       } else {
-        console.log('Ethereum Object doesnt exist');
+        errorModal('Ethereum Object doesnt exist');
       }
     } catch (e) {
-      console.log(e);
+      errorModal(e);
     }
   };
 
@@ -220,7 +228,6 @@ const Header = () => {
 
         let nftNumber = await connetedContract.getTotalNFTsMintedSoFar();
         setTotalNFT(parseInt(nftNumber._hex, 16));
-        // await nftNumber.wait();
 
         console.log(nftNumber._hex);
       } else {
@@ -239,19 +246,8 @@ const Header = () => {
 
   useEffect(() => {
     checkIfWalletIsConnected();
-    getTotalNumber();
   }, []);
-  useEffect(() => {
-    getTotalNumber();
-  }, [setTotalNFT]);
 
-  const renderNotConnectedContainer = () => (
-    // <CTAButton>
-    <ConnectWalletButton onClick={connectWallet}>
-      Connect to Wallet
-    </ConnectWalletButton>
-    // </CTAButton>
-  );
   return (
     <HeaderWrapper>
       <GradientText>
@@ -261,9 +257,11 @@ const Header = () => {
       <Description>
         Each unique. Each beautiful. Discover your NFT today.
       </Description>
-      {/* {renderNotConnectedContainer()} */}
+
       {currentAccount === '' ? (
-        renderNotConnectedContainer()
+        <ConnectWalletButton onClick={connectWallet}>
+          Connect to Wallet
+        </ConnectWalletButton>
       ) : (
         <ConnectWalletButton
           disabled={totalNFT === 50}
@@ -275,7 +273,9 @@ const Header = () => {
       <ConnectWalletButton onClick={HandleCollectionButton}>
         See My Collection
       </ConnectWalletButton>
-      <GradientText>{` ${totalNFT}/50 NFTs Minted So Far`}</GradientText>
+      {currentAccount ? (
+        <GradientText>{` ${totalNFT}/50 NFTs Minted So Far`}</GradientText>
+      ) : null}
     </HeaderWrapper>
   );
 };
